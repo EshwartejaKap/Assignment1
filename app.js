@@ -133,7 +133,8 @@ app.get('/todos/:todoId/', async (request, response) => {
 //API 3
 app.get('/agenda/', async (request, response) => {
   const {date} = request.query
-  if (isValid(new Date(date))) {
+  let formatDate = (new Date(date), 'yyyy-MM-dd')
+  if (isValid(new Date(formatDate))) {
     const query = `SELECT * FROM todo WHERE due_date = '${date}';`
     const dbResponse = await db.all(query)
     response.send(convert(dbResponse))
@@ -146,10 +147,24 @@ app.get('/agenda/', async (request, response) => {
 //API 4
 app.post('/todos/', async (request, response) => {
   const {id, todo, priority, status, category, dueDate} = request.body
-  const query = `INSERT INTO todo (id,todo,priority,status,category,due_date) VALUES 
-  (${id},'${todo}','${priority}','${status}','${category}','${dueDate}');`
-  const dbResponse = await db.run(query)
-  response.send('Todo Successfully Added')
+  if (isthere(priority) === undefined) {
+    response.status(400)
+    response.send('Invalid Todo Priority')
+  } else if (isthere(status) === undefined) {
+    response.status(400)
+    response.send('Invalid Todo Status')
+  } else if (isthere(category) === undefined) {
+    response.status(400)
+    response.send('Invalid Todo Category')
+  } else if (isValid(new Date(dueDate)) === false) {
+    response.status(400)
+    response.send('Invalid Due Date')
+  } else {
+    const query = `INSERT INTO todo (id,todo,priority,status,category,due_date) VALUES 
+    (${id},'${todo}','${priority}','${status}','${category}','${dueDate}');`
+    const dbResponse = await db.run(query)
+    response.send('Todo Successfully Added')
+  }
 })
 //API 5
 
@@ -157,25 +172,40 @@ app.put('/todos/:todoId/', async (request, response) => {
   const {todoId} = request.params
   const {status, priority, todo, category, dueDate} = request.body
   if (status !== undefined) {
-    const query = `UPDATE todo SET status = '${status}' WHERE id = ${todoId};`
-    const dbResponse = await db.run(query)
-    response.send('Status Updated')
+    if (isthere(status)) {
+      const query = `UPDATE todo SET status = '${status}' WHERE id = ${todoId};`
+      const dbResponse = await db.run(query)
+      response.send('Status Updated')
+    } else {
+      response.status(400)
+      response.send('Invalid Todo Status')
+    }
   } else if (priority !== undefined) {
-    const query = `UPDATE todo SET priority = '${priority}' WHERE id = ${todoId};`
-    const dbResponse = await db.run(query)
-    response.send('Priority Updated')
+    if (isthere(priority)) {
+      const query = `UPDATE todo SET priority = '${priority}' WHERE id = ${todoId};`
+      const dbResponse = await db.run(query)
+      response.send('Priority Updated')
+    } else {
+      response.status(400)
+      response.send('Invalid Todo Priority')
+    }
   } else if (todo !== undefined) {
     const query = `UPDATE todo SET todo = '${todo}' WHERE id = ${todoId};`
     const dbResponse = await db.run(query)
     response.send('Todo Updated')
   } else if (category !== undefined) {
-    const query = `UPDATE todo SET category = '${category}' WHERE id = ${todoId};`
-    const dbResponse = await db.run(query)
-    response.send('Category Updated')
+    if (isthere(category)) {
+      const query = `UPDATE todo SET category = '${category}' WHERE id = ${todoId};`
+      const dbResponse = await db.run(query)
+      response.send('Category Updated')
+    } else {
+      response.status(400)
+      response.send('Invalid Todo Category')
+    }
   } else if (dueDate !== undefined) {
     const {dueDate} = request.body
     if (isValid(new Date(dueDate))) {
-      const query = `UPDATE  todo SET due_date = '${dueDate}';`
+      const query = `UPDATE  todo SET due_date = '${dueDate} WHERE id = {todoId}';`
       const dbResponse = await db.run(query)
       response.send('Due Date Updated')
     } else {
